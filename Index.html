@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Style Dual App - Integrated</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            background: #0f0f23;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+            max-width: 100vw;
+        }
+
+        /* Desktop Layout */
+        @media (min-width: 768px) {
+            body {
+                background: #0f0f23;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .main-container {
+                max-width: 1200px;
+                max-height: 800px;
+                width: 90vw;
+                height: 85vh;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                overflow: hidden;
+            }
+        }
+
+        .header {
+            background: #075e54;
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+            min-height: 50px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .config-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+            min-height: 36px;
+            min-width: 60px;
+        }
+
+        .config-panel {
+            display: none;
+            background: #f0f2f5;
+            padding: 12px;
+            border-bottom: 1px solid #e4e6ea;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 99;
+        }
+
+        .config-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .config-row label {
+            min-width: 60px;
+            font-weight: 500;
+            font-size: 12px;
+            color: #54656f;
+        }
+
+        .config-row input[type="text"] {
+            flex: 1;
+            min-width: 120px;
+            padding: 6px 8px;
+            border: 1px solid #d1d7db;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .config-row input[type="file"] {
+            padding: 4px;
+            border: 1px solid #d1d7db;
+            border-radius: 6px;
+            font-size: 10px;
+            max-width: 150px;
+        }
+
+        .save-btn, .clear-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+            min-height: 28px;
+        }
+
+        .save-btn {
+            background: #25d366;
+            color: white;
+            min-width: 50px;
+        }
+
+        .clear-btn {
+            background: #ea4335;
+            color: white;
+            margin-left: 4px;
+            min-width: 45px;
+        }
+
+        .upload-status {
+            font-size: 9px;
+            margin-left: 6px;
+            flex-basis: 100%;
+            margin-top: 2px;
+        }
+
+        /* Content Area - SWIPE STRUCTURE */
+        .content-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-x;
+        }
+
+        .swipe-container {
+            display: flex;
+            width: 200%;
+            height: 100%;
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+            position: relative;
+        }
+
+        .app-panel {
+            width: 50%;
+            height: 100%;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .app-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            pointer-events: auto;
+            transition: pointer-events 0.1s ease;
+        }
+
+        .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #8696a0;
+            background: #f0f2f5;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid #e4e6ea;
+            border-left: 3px solid #25d366;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            width: 100%;
+            height: 100%;
+            color: #ea4335;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 14px;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .error button {
+            background: #075e54;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        /* Bottom Navigation */
+        .bottom-navigation {
+            background: #ffffff;
+            border-top: 1px solid #e4e6ea;
+            display: flex;
+            height: 60px;
+            position: relative;
+            z-index: 100;
+        }
+
+        .nav-tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            gap: 2px;
+            min-height: 60px;
+            padding: 8px 4px;
+        }
+
+        .nav-tab:active {
+            transform: scale(0.95);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            transition: color 0.2s ease;
+            height: 22px;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80px;
+        }
+
+        .nav-tab.active .nav-icon,
+        .nav-tab.active .nav-label {
+            color: #075e54;
+        }
+
+        .nav-tab:not(.active) .nav-icon,
+        .nav-tab:not(.active) .nav-label {
+            color: #8696a0;
+        }
+
+        .nav-tab.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: #075e54;
+            border-radius: 0 0 3px 3px;
+        }
+
+        /* Swipe Indicator */
+        .swipe-indicator {
+            position: absolute;
+            bottom: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 101;
+            max-width: 90vw;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .swipe-indicator.show {
+            opacity: 1;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: #f0f2f5;
+            color: #54656f;
+            padding: 5px 12px;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e4e6ea;
+            min-height: 32px;
+        }
+
+        .status-indicator {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #25d366;
+            margin-right: 5px;
+        }
+
+        /* Mobile touch improvements */
+        @media (max-width: 767px) {
+            .content-wrapper {
+                touch-action: pan-x;
+                user-select: none;
+                -webkit-user-select: none;
+            }
+            
+            .swipe-container {
+                touch-action: pan-x;
+            }
+            
+            .app-iframe {
+                touch-action: pan-x;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1>💬 WhatsApp Style Apps - Integrated</h1>
+            <button class="config-btn" onclick="toggleConfig()">⚙️</button>
+        </div>
+        
+        <div class="config-panel" id="configPanel">
+            <div class="config-row">
+                <label>App 1 Name:</label>
+                <input type="text" id="app1Name" value="Application 1" placeholder="App name">
+                <button class="save-btn" onclick="updateAppUrl('app1')">Set</button>
+            </div>
+            <div class="config-row">
+                <label>App 1 URL:</label>
+                <input type="text" id="app1Url" value="" placeholder="https://example.com">
+            </div>
+            <div class="config-row">
+                <label>Upload App 1:</label>
+                <input type="file" id="app1File" accept=".html,.htm" onchange="uploadApp('app1', this)">
+                <button class="clear-btn" onclick="clearApp('app1')">Clear</button>
+            </div>
+            <span id="app1Status" class="upload-status"></span>
+            
+            <div class="config-row">
+                <label>App 2 Name:</label>
+                <input type="text" id="app2Name" value="Application 2" placeholder="App name">
+                <button class="save-btn" onclick="updateAppUrl('app2')">Set</button>
+            </div>
+            <div class="config-row">
+                <label>App 2 URL:</label>
+                <input type="text" id="app2Url" value="" placeholder="https://example.com">
+            </div>
+            <div class="config-row">
+                <label>Upload App 2:</label>
+                <input type="file" id="app2File" accept=".html,.htm" onchange="uploadApp('app2', this)">
+                <button class="clear-btn" onclick="clearApp('app2')">Clear</button>
+            </div>
+            <span id="app2Status" class="upload-status"></span>
+        </div>
+        
+        <div class="content-wrapper">
+            <div class="swipe-container" id="swipeContainer">
+                <div class="app-panel" id="app1Panel">
+                    <div class="placeholder">
+                        <div class="spinner"></div>
+                        <p>Upload HTML file या URL set करें</p>
+                        <small style="margin-top: 8px; opacity: 0.7;">Swipe right करके App 2 पर जाएं →</small>
+                    </div>
+                </div>
+                <div class="app-panel" id="app2Panel">
+                    <div class="placeholder">
+                        <div class="spinner"></div>
+                        <p>Upload HTML file या URL set करें</p>
+                        <small style="margin-top: 8px; opacity: 0.7;">← Swipe left करके App 1 पर जाएं</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="swipe-indicator" id="swipeIndicator">
+            👈 Swipe करके apps के बीच switch करें 👉
+        </div>
+
+        <div class="bottom-navigation">
+            <button class="nav-tab active" id="navTab1" onclick="switchToApp(0)">
+                <div class="nav-icon">📱</div>
+                <div class="nav-label" id="navLabel1">App 1</div>
+            </button>
+            <button class="nav-tab" id="navTab2" onclick="switchToApp(1)">
+                <div class="nav-icon">🚀</div>
+                <div class="nav-label" id="navLabel2">App 2</div>
+            </button>
+        </div>
+
+        <div class="status-bar">
+            <div style="display: flex; align-items: center;">
+                <div class="status-indicator"></div>
+                <span id="status">Ready - Swipe या tap करके switch करें</span>
+            </div>
+            <div id="app-info">0/2 apps loaded</div>
+        </div>
+    </div>
+
+    <script>
+        // App Configuration
+        const APP_CONFIG = {
+            app1: {
+                name: "Application 1",
+                url: "",
+                loaded: false,
+                type: null,
+                content: null,
+                fileName: null,
+                iframe: null
+            },
+            app2: {
+                name: "Application 2", 
+                url: "",
+                loaded: false,
+                type: null,
+                content: null,
+                fileName: null,
+                iframe: null
+            }
+        };
+
+        class WhatsAppStyleRunner {
+            constructor() {
+                this.currentIndex = 0;
+                this.isAnimating = false;
+                this.swipeContainer = document.getElementById('swipeContainer');
+                this.swipeIndicator = document.getElementById('swipeIndicator');
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.updateNavigationUI();
+                this.showSwipeHint();
+                
+                // Show initial status
+                setTimeout(() => {
+                    this.updateStatus('💡 Config खोलकर URLs या HTML files add करें');
+                }, 2000);
+            }
+
+            setupEventListeners() {
+                // iframe से आने वाले संदेशों को सुनने के लिए लिसनर
+                window.addEventListener('message', this.handleIframeSwipe.bind(this));
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        const newIndex = e.key === 'ArrowLeft' ? 0 : 1;
+                        this.switchToApp(newIndex);
+                    }
+                });
+
+                // Prevent context menu
+                this.swipeContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+            }
+
+            handleIframeSwipe(event) {
+                // Security: iframe के ओरिजिन को validate करें!
+                // प्रोडक्शन में, 'https://your-iframe-app-domain.com' से बदलें।
+                if (event.origin === 'null' || event.origin === window.location.origin) {
+                    // console.log("Message from same origin or file.");
+                } else if (APP_CONFIG.app1.url && event.origin !== new URL(APP_CONFIG.app1.url).origin && 
+                           APP_CONFIG.app2.url && event.origin !== new URL(APP_CONFIG.app2.url).origin) {
+                    console.log('संदेश को अनदेखा किया गया: गलत ओरिजिन से आया है।');
+                    return;
+                }
+
+                // Message data use करें
+                if (event.data.type === 'gesture' && event.data.gesture === 'horizontalSwipe') {
+                    const direction = event.data.direction;
+                    console.log('iframe से स्वाइप जेस्चर प्राप्त हुआ:', direction);
+
+                    if (this.isAnimating) return;
+
+                    if (direction === 'left' && this.currentIndex < 1) {
+                        this.switchToApp(1);
+                        this.updateStatus('iframe से स्वाइप करके App 2 पर गए');
+                    } else if (direction === 'right' && this.currentIndex > 0) {
+                        this.switchToApp(0);
+                        this.updateStatus('iframe से स्वाइप करके App 1 पर गए');
+                    }
+                }
+            }
+
+            switchToApp(index) {
+                if (index === this.currentIndex || this.isAnimating) return;
+                
+                this.isAnimating = true;
+                this.currentIndex = index;
+                
+                this.swipeContainer.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                this.swipeContainer.style.transform = `translateX(-${index * 50}%)`;
+                
+                this.updateNavigationUI();
+                this.createTabHaptic();
+                
+                setTimeout(() => {
+                    this.isAnimating = false;
+                }, 300);
+            }
+
+            animateToApp(index) {
+                // इस मेथड को अब iframe से आए संदेशों द्वारा handle किया जाएगा
+                // और यह सीधे switchToApp को कॉल करेगा।
+            }
+
+            updateNavigationUI() {
+                const tabs = document.querySelectorAll('.nav-tab');
+                tabs.forEach((tab, i) => {
+                    tab.classList.toggle('active', i === this.currentIndex);
+                });
+                
+                document.getElementById('navLabel1').textContent = APP_CONFIG.app1.name;
+                document.getElementById('navLabel2').textContent = APP_CONFIG.app2.name;
+            }
+
+            createTabHaptic() {
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(30);
+                }
+            }
+
+            showSwipeHint() {
+                setTimeout(() => {
+                    this.swipeIndicator.classList.add('show');
+                    setTimeout(() => {
+                        this.swipeIndicator.classList.remove('show');
+                    }, 4000);
+                }, 1000);
+            }
+
+            // App loading functions (no change needed here)
+            async loadApp(appName) {
+                const app = APP_CONFIG[appName];
+                const panel = document.getElementById(`${appName}Panel`);
+                
+                this.showLoading(appName);
+                
+                try {
+                    const existingIframe = panel.querySelector('iframe');
+                    if (existingIframe) {
+                        existingIframe.remove();
+                    }
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'app-iframe';
+                    iframe.style.background = 'white';
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.sandbox = 'allow-scripts allow-same-origin allow-popups allow-forms'; // Recommended for security
+                    app.iframe = iframe;
+                    
+                    if (app.type === 'file' && app.content) {
+                        const blob = new Blob([app.content], { type: 'text/html' });
+                        const blobUrl = URL.createObjectURL(blob);
+                        iframe.src = blobUrl;
+                    } else if (app.type === 'url' && app.url) {
+                        iframe.src = app.url;
+                    } else {
+                        throw new Error('No valid source');
+                    }
+                    
+                    panel.innerHTML = '';
+                    panel.appendChild(iframe);
+                    
+                    iframe.onload = () => {
+                        app.loaded = true;
+                        this.updateAppInfo();
+                        this.updateStatus(`${app.name} loaded ✓`);
+                    };
+                    
+                    iframe.onerror = () => {
+                        this.showError(appName, 'Load failed - Check URL');
+                    };
+                    
+                    setTimeout(() => {
+                        if (!app.loaded) {
+                            this.showError(appName, 'Load timeout - URL may be slow');
+                        }
+                    }, 8000);
+                    
+                } catch (error) {
+                    this.showError(appName, error.message);
+                }
+            }
+
+            showLoading(appName) {
+                const panel = document.getElementById(`${appName}Panel`);
+                panel.innerHTML = `
+                    <div class="placeholder">
+                        <div class="spinner"></div>
+                        <p>Loading ${APP_CONFIG[appName].name}...</p>
+                        <small style="margin-top: 8px; opacity: 0.7;">Please wait...</small>
+                    </div>
+                `;
+            }
+
+            showError(appName, message) {
+                const panel = document.getElementById(`${appName}Panel`);
+                panel.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Loading Failed</h3>
+                        <p><strong>App:</strong> ${APP_CONFIG[appName].name}</p>
+                        <p><strong>Error:</strong> ${message}</p>
+                        <button onclick="appRunner.retryLoad('${appName}')">🔄 Try Again</button>
+                        <button onclick="toggleConfig()" style="margin-left: 10px; background: #25d366;">⚙️ Config</button>
+                    </div>
+                `;
+                this.updateStatus(`Failed to load ${APP_CONFIG[appName].name}`);
+            }
+
+            updateAppConfig(appName, name, url) {
+                APP_CONFIG[appName].name = name;
+                APP_CONFIG[appName].url = url;
+                APP_CONFIG[appName].type = 'url';
+                APP_CONFIG[appName].loaded = false;
+                APP_CONFIG[appName].content = null;
+                APP_CONFIG[appName].fileName = null;
+                
+                this.updateNavigationUI();
+                this.updateStatus(`Loading ${name}...`);
+                this.loadApp(appName);
+            }
+
+            setUploadedApp(appName, content, fileName) {
+                APP_CONFIG[appName].content = content;
+                APP_CONFIG[appName].loaded = false;
+                APP_CONFIG[appName].type = 'file';
+                APP_CONFIG[appName].fileName = fileName;
+                APP_CONFIG[appName].url = '';
+                
+                this.updateStatus(`Loading ${fileName}...`);
+                this.loadApp(appName);
+                this.updateNavigationUI();
+            }
+
+            clearApp(appName) {
+                const panel = document.getElementById(`${appName}Panel`);
+                const isApp1 = appName === 'app1';
+                panel.innerHTML = `
+                    <div class="placeholder">
+                        <div class="spinner"></div>
+                        <p>Upload HTML file या URL set करें</p>
+                        <small style="margin-top: 8px; opacity: 0.7;">${isApp1 ? 'Swipe right करके App 2 पर जाएं →' : '← Swipe left करके App 1 पर जाएं'}</small>
+                    </div>
+                `;
+                
+                APP_CONFIG[appName] = {
+                    name: `Application ${appName.slice(-1)}`,
+                    url: "",
+                    loaded: false,
+                    type: null,
+                    content: null,
+                    fileName: null,
+                    iframe: null
+                };
+                
+                this.updateNavigationUI();
+                this.updateStatus(`${appName} cleared`);
+                this.updateAppInfo();
+            }
+
+            updateStatus(message) {
+                document.getElementById('status').textContent = message;
+                setTimeout(() => {
+                    document.getElementById('status').textContent = 'Ready - Swipe या tap करके switch करें';
+                }, 3000);
+            }
+
+            updateAppInfo() {
+                const loadedCount = Object.values(APP_CONFIG).filter(app => app.loaded).length;
+                document.getElementById('app-info').textContent = `${loadedCount}/2 apps loaded`;
+            }
+
+            retryLoad(appName) {
+                APP_CONFIG[appName].loaded = false;
+                this.updateStatus(`Retrying to load ${APP_CONFIG[appName].name}...`);
+                this.loadApp(appName);
+            }
+        }
+
+        // Initialize the app runner
+        const appRunner = new WhatsAppStyleRunner();
+
+        // Global Functions
+        function toggleConfig() {
+            const panel = document.getElementById('configPanel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function switchToApp(index) {
+            appRunner.switchToApp(index);
+        }
+
+        function updateAppUrl(appName) {
+            const name = document.getElementById(`${appName}Name`).value.trim();
+            const url = document.getElementById(`${appName}Url`).value.trim();
+            
+            if (!name || !url) {
+                alert('Name और URL दोनों required हैं!');
+                return;
+            }
+            
+            appRunner.updateAppConfig(appName, name, url);
+        }
+
+        function uploadApp(appName, fileInput) {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+                alert('केवल HTML files (.html या .htm) upload कर सकते हैं!');
+                fileInput.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            const statusElement = document.getElementById(`${appName}Status`);
+            
+            statusElement.textContent = 'Uploading...';
+            statusElement.style.color = '#f39c12';
+
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    
+                    const nameInput = document.getElementById(`${appName}Name`);
+                    if (!nameInput.value.trim() || nameInput.value === `Application ${appName.slice(-1)}`) {
+                        nameInput.value = file.name.replace(/\.(html|htm)$/i, '');
+                        APP_CONFIG[appName].name = nameInput.value;
+                    }
+                    
+                    statusElement.textContent = `⏳ Loading...`;
+                    statusElement.style.color = '#f39c12';
+                    
+                    appRunner.setUploadedApp(appName, content, file.name);
+                    
+                    setTimeout(() => {
+                        statusElement.textContent = `✓ ${file.name}`;
+                        statusElement.style.color = '#25d366';
+                    }, 500);
+                    
+                } catch (error) {
+                    statusElement.textContent = '✗ Upload failed';
+                    statusElement.style.color = '#ea4335';
+                    alert('File upload failed: ' + error.message);
+                }
+            };
+
+            reader.onerror = function() {
+                statusElement.textContent = '✗ Read failed';
+                statusElement.style.color = '#ea4335';
+                alert('File reading failed');
+            };
+
+            reader.readAsText(file);
+        }
+
+        function clearApp(appName) {
+            if (confirm(`Clear ${APP_CONFIG[appName].name}?`)) {
+                document.getElementById(`${appName}File`).value = '';
+                document.getElementById(`${appName}Url`).value = '';
+                document.getElementById(`${appName}Status`).textContent = '';
+                document.getElementById(`${appName}Name`).value = `Application ${appName.slice(-1)}`;
+                
+                appRunner.clearApp(appName);
+            }
+        }
+
+        // Auto-hide config panel
+        setTimeout(() => {
+            document.getElementById('configPanel').style.display = 'none';
+        }, 10000);
+
+        // Test function for quick testing
+        window.loadTestApps = function() {
+            console.log('🚀 Loading test apps...');
+            
+            document.getElementById('app1Name').value = 'Google';
+            document.getElementById('app1Url').value = 'https://www.google.com';
+            updateAppUrl('app1');
+            
+            setTimeout(() => {
+                document.getElementById('app2Name').value = 'Example';
+                document.getElementById('app2Url').value = 'https://example.com';
+                updateAppUrl('app2');
+                console.log('✅ Test apps loaded! Try swiping inside the iframes!');
+            }, 1000);
+        };
+        
+        // Console helper
+        console.log(`
+        🚀 WhatsApp Style App Runner - INTEGRATED VERSION
+
+        Quick test: loadTestApps()
+
+        Features:
+        ✅ iframe स्वाइप जेस्चर को सुनता है
+        ✅ overlay हटा दिया गया है
+        ✅ iframe के अंदर टच इवेंट्स अब काम करते हैं
+        `);
+    </script>
+</body>
+</html>
